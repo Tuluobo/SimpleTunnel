@@ -7,13 +7,12 @@
 */
 
 import Foundation
-import SimpleTunnelServices
 import NetworkExtension
 
 // MARK: Protocols
 
 /// The delegate protocol for ClientTunnelConnection.
-protocol ClientTunnelConnectionDelegate {
+public protocol ClientTunnelConnectionDelegate {
 	/// Handle the connection being opened.
 	func tunnelConnectionDidOpen(_ connection: ClientTunnelConnection, configuration: [String: AnyObject])
 	/// Handle the connection being closed.
@@ -21,7 +20,7 @@ protocol ClientTunnelConnectionDelegate {
 }
 
 /// An object used to tunnel IP packets using the SimpleTunnel protocol.
-class ClientTunnelConnection: Connection {
+public class ClientTunnelConnection: Connection {
 
 	// MARK: Properties
 
@@ -33,7 +32,7 @@ class ClientTunnelConnection: Connection {
 
 	// MARK: Initializers
 
-	init(tunnel: ClientTunnel, clientPacketFlow: NEPacketTunnelFlow, connectionDelegate: ClientTunnelConnectionDelegate) {
+	public init(tunnel: ClientTunnel, clientPacketFlow: NEPacketTunnelFlow, connectionDelegate: ClientTunnelConnectionDelegate) {
 		delegate = connectionDelegate
 		packetFlow = clientPacketFlow
 		let newConnectionIdentifier = arc4random()
@@ -43,7 +42,7 @@ class ClientTunnelConnection: Connection {
 	// MARK: Interface
 
 	/// Open the connection by sending a "connection open" message to the tunnel server.
-	func open() {
+	public func open() {
 		guard let clientTunnel = tunnel as? ClientTunnel else { return }
 
 		let properties = createMessagePropertiesForConnection(identifier, commandType: .open, extraProperties:[
@@ -58,7 +57,7 @@ class ClientTunnelConnection: Connection {
 	}
 
 	/// Handle packets coming from the packet flow.
-	func handlePackets(_ packets: [Data], protocols: [NSNumber]) {
+	private func handlePackets(_ packets: [Data], protocols: [NSNumber]) {
 		guard let clientTunnel = tunnel as? ClientTunnel else { return }
 
 		let properties = createMessagePropertiesForConnection(identifier, commandType: .packets, extraProperties:[
@@ -80,7 +79,7 @@ class ClientTunnelConnection: Connection {
 	}
 
 	/// Make the initial readPacketsWithCompletionHandler call.
-	func startHandlingPackets() {
+	public func startHandlingPackets() {
 		packetFlow.readPackets { inPackets, inProtocols in
 			self.handlePackets(inPackets, protocols: inProtocols)
 		}
@@ -89,7 +88,7 @@ class ClientTunnelConnection: Connection {
 	// MARK: Connection
 
 	/// Handle the event of the connection being established.
-	override func handleOpenCompleted(_ resultCode: TunnelConnectionOpenResult, properties: [NSObject: AnyObject]) {
+    public override func handleOpenCompleted(_ resultCode: TunnelConnectionOpenResult, properties: [NSObject: AnyObject]) {
 		guard resultCode == .success else {
 			delegate.tunnelConnectionDidClose(self, error: SimpleTunnelError.badConnection)
 			return
@@ -105,7 +104,7 @@ class ClientTunnelConnection: Connection {
 	}
 
 	/// Send packets to the virtual interface to be injected into the IP stack.
-	override func sendPackets(_ packets: [Data], protocols: [NSNumber]) {
+    public override func sendPackets(_ packets: [Data], protocols: [NSNumber]) {
 		packetFlow.writePackets(packets, withProtocols: protocols)
 	}
 }

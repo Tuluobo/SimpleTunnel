@@ -8,6 +8,7 @@
 
 import Foundation
 import SystemConfiguration
+import SimpleTunnelServices
 
 /// An object containing configuration settings for the SimpleTunnel server.
 class ServerConfiguration {

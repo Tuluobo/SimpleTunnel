@@ -7,6 +7,7 @@
 */
 
 import Foundation
+import SimpleTunnelServices
 
 /// An object that contains a pool of IP addresses to assign to tunnel clients.
 class AddressPool {

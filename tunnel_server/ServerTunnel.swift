@@ -8,6 +8,7 @@
 
 import Foundation
 import SystemConfiguration
+import SimpleTunnelServices
 
 /// The server-side implementation of the SimpleTunnel protocol.
 class ServerTunnel: Tunnel, TunnelDelegate, StreamDelegate {
@@ -107,6 +108,7 @@ class ServerTunnel: Tunnel, TunnelDelegate, StreamDelegate {
 
 					// Compute the length of the payload.
 					packetBytesRemaining = Int(totalLength) - MemoryLayout.size(ofValue: totalLength)
+					simpleTunnelLog("[Tunnel] client→server: incoming message header parsed, expecting \(packetBytesRemaining) payload bytes")
 					packetBuffer.length = 0
 				}
 			}
@@ -115,6 +117,7 @@ class ServerTunnel: Tunnel, TunnelDelegate, StreamDelegate {
 				packetBytesRemaining -= bytesRead
 				if packetBytesRemaining == 0 {
 					// The entire packet has been received, process it.
+                    simpleTunnelLog("[Tunnel] client→server: full message received (\(packetBuffer.count) payload bytes), dispatching")
                     if !handlePacket(packetBuffer as Data) {
 						return false
 					}
@@ -128,6 +131,7 @@ class ServerTunnel: Tunnel, TunnelDelegate, StreamDelegate {
 
 	/// Send an "Open Result" message to the client.
 	func sendOpenResultForConnection(connectionIdentifier: Int, resultCode: TunnelConnectionOpenResult) {
+		simpleTunnelLog("[Tunnel] server→client: open result '\(resultCode)' for connection \(connectionIdentifier)")
 		let properties = createMessagePropertiesForConnection(connectionIdentifier, commandType: .openResult, extraProperties:[
 				TunnelMessageKey.ResultCode.rawValue: resultCode.rawValue as AnyObject
 			])
@@ -156,6 +160,7 @@ class ServerTunnel: Tunnel, TunnelDelegate, StreamDelegate {
 						guard let host = properties[TunnelMessageKey.Host.rawValue] as? String,
                               let port = properties[TunnelMessageKey.Port.rawValue] as? NSNumber
 							else { break }
+						simpleTunnelLog("[TCP] open request: connection \(connectionIdentifier) → \(host):\(port)")
 						let newConnection = ServerConnection(connectionIdentifier: connectionIdentifier, parentTunnel: self)
                     guard newConnection.open(host: host, port: port.intValue) else {
 							newConnection.closeConnection(.all)
@@ -163,11 +168,13 @@ class ServerTunnel: Tunnel, TunnelDelegate, StreamDelegate {
 						}
 
 					case .udp:
+						simpleTunnelLog("[UDP] open request: connection \(connectionIdentifier)")
 						let _ = UDPServerConnection(connectionIdentifier: connectionIdentifier, parentTunnel: self)
                         sendOpenResultForConnection(connectionIdentifier: connectionIdentifier, resultCode: .success)
 				}
 
         case .ip:
+				simpleTunnelLog("[IP] open request: connection \(connectionIdentifier)")
 				let newConnection = ServerTunnelConnection(connectionIdentifier: connectionIdentifier, parentTunnel: self)
 				guard newConnection.open() else {
 					newConnection.closeConnection(.all)
@@ -215,9 +222,11 @@ class ServerTunnel: Tunnel, TunnelDelegate, StreamDelegate {
 						needCloseTunnel = !handleBytesAvailable()
 
 					case [.openCompleted]:
+						simpleTunnelLog("[Tunnel] read stream open completed, tunnel is up")
 						delegate?.tunnelDidOpen(self)
 
 					case [.errorOccurred], [.endEncountered]:
+						simpleTunnelLog("[Tunnel] read stream error/EOF (\(eventCode)), closing tunnel")
 						needCloseTunnel = true
 
 					default:
@@ -274,11 +283,13 @@ class ServerTunnel: Tunnel, TunnelDelegate, StreamDelegate {
 
 	/// Handle a message received from the client.
     override func handleMessage(_ commandType: TunnelCommand, properties: [String: AnyObject], connection: Connection?) -> Bool {
+		simpleTunnelLog("[Tunnel] client→server: handling command '\(commandType)' for connection \(connection?.identifier ?? -1)")
 		switch commandType {
 			case .open:
             handleConnectionOpen(properties: properties)
 
 			case .fetchConfiguration:
+				simpleTunnelLog("[Tunnel] client→server: fetch configuration request")
 				var personalized = ServerTunnel.configuration.configuration
 				personalized.removeValue(forKey: SettingsKey.IPv4.rawValue)
 				let messageProperties = createMessagePropertiesForConnection(0, commandType: .fetchConfiguration, extraProperties: [TunnelMessageKey.Configuration.rawValue: personalized as AnyObject])

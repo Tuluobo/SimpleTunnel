@@ -7,6 +7,7 @@
 */
 
 import Foundation
+import SimpleTunnelServices
 
 /// An object representing the server side of a logical flow of TCP network data in the SimpleTunnel tunneling protocol.
 class ServerConnection: Connection, StreamDelegate {
@@ -94,11 +95,14 @@ class ServerConnection: Connection, StreamDelegate {
 		guard let stream = writeStream else { return }
 		var written = 0
 
+		simpleTunnelLog("[TCP] tunnel→remote: connection \(identifier) writing \(data.count) bytes to host")
+
 		if savedData.isEmpty {
 			written = writeData(data, toStream: stream, startingAtOffset: 0)
 
             if written < data.count {
 				// We could not write all of the data to the connection. Tell the client to stop reading data for this connection.
+				simpleTunnelLog("[TCP] tunnel→remote: connection \(identifier) partial write \(written)/\(data.count), suspending client reads")
                 stream.remove(from: .main, forMode: .default)
 				tunnel?.sendSuspendForConnection(identifier)
 			}
@@ -172,6 +176,7 @@ class ServerConnection: Connection, StreamDelegate {
 								}
 
                                 let readData = Data(bytes: readBuffer, count: bytesRead)
+								simpleTunnelLog("[TCP] remote→tunnel: connection \(identifier) read \(bytesRead) bytes from host, forwarding to client")
 								tunnel?.sendData(readData, forConnection: identifier)
 							}
 						}
@@ -189,6 +194,7 @@ class ServerConnection: Connection, StreamDelegate {
 
 					case [.openCompleted]:
 						if let serverTunnel = tunnel as? ServerTunnel {
+							simpleTunnelLog("[TCP] remote→tunnel: connection \(identifier) connected to host, sending open success")
                             serverTunnel.sendOpenResultForConnection(connectionIdentifier: identifier, resultCode: .success)
 						}
 

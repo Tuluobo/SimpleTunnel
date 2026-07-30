@@ -8,6 +8,7 @@
 
 import Foundation
 import Darwin
+import SimpleTunnelServices
 
 /// An object representing the server side of a logical flow of UDP network data in the SimpleTunnel tunneling protocol.
 class UDPServerConnection: Connection {
@@ -83,6 +84,8 @@ class UDPServerConnection: Connection {
 
 		guard newSocket > 0 else { return false }
 
+		simpleTunnelLog("[UDP] connection \(identifier) created socket (family \(addressFamily)) for peer \(address)")
+
         let newResponseSource = DispatchSource.makeReadSource(fileDescriptor: newSocket, queue: DispatchQueue.main)
 
         newResponseSource.setCancelHandler {
@@ -135,7 +138,7 @@ class UDPServerConnection: Connection {
 			}
 
             let responseDatagram = Data(bytes: response, count: bytesRead)
-			simpleTunnelLog("UDP connection id \(self.identifier) received = \(bytesRead) bytes from host = \(endpoint.host) port = \(endpoint.port)")
+			simpleTunnelLog("[UDP] remote→tunnel: connection \(self.identifier) received \(bytesRead) bytes from \(endpoint.host):\(endpoint.port), forwarding to client")
 			self.tunnel?.sendDataWithEndPoint(responseDatagram, forConnection: self.identifier, host: endpoint.host, port: endpoint.port)
 		}
 
@@ -147,6 +150,8 @@ class UDPServerConnection: Connection {
 
     /// Send a datagram to a given host and port.
     override func sendDataWithEndPoint(_ data: Data, host: String, port: Int) {
+
+		simpleTunnelLog("[UDP] tunnel→remote: connection \(identifier) sending \(data.count) bytes from client to \(host):\(port)")
 
 		if responseSource == nil {
             guard createSocketWithAddressFamilyFromAddress(address: host) else {
@@ -206,7 +211,7 @@ class UDPServerConnection: Connection {
 
 		if sent == data.count {
 			// Success
-			simpleTunnelLog("UDP connection id \(identifier) sent \(data.count) bytes to host = \(host) port \(port)")
+			simpleTunnelLog("[UDP] tunnel→remote: connection \(identifier) sent \(data.count) bytes to \(host):\(port)")
 		}
     }
 

@@ -48,10 +48,10 @@ open class Connection: NSObject {
 	open var tunnel: Tunnel?
 
 	/// The list of data that needs to be written to the connection when possible.
-	let savedData = SavedData()
+    public let savedData = SavedData()
 
 	/// The direction(s) in which the connection is closed.
-	var currentCloseDirection = TunnelConnectionCloseDirection.none
+	public var currentCloseDirection = TunnelConnectionCloseDirection.none
 
 	/// Indicates if the tunnel is being used by this connection exclusively.
 	let isExclusiveTunnel: Bool

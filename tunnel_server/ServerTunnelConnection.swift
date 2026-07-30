@@ -8,6 +8,7 @@
 
 import Foundation
 import Darwin
+import SimpleTunnelServices
 
 /// An object that provides a bridge between a logical flow of packets in the SimpleTunnel protocol and a UTUN interface.
 class ServerTunnelConnection: Connection {
@@ -79,6 +80,7 @@ class ServerTunnelConnection: Connection {
 
 		// Send the personalized configuration along with the "open result" message.
         sendOpenResult(result: .success, extraProperties: response)
+		simpleTunnelLog("[IP] connection \(identifier) opened, UTUN interface \(utunName ?? "?") assigned address \(address)")
 
 		return true
 	}
@@ -183,6 +185,7 @@ class ServerTunnelConnection: Connection {
 
 			// Buffer up packets so that we can include multiple packets per message. Once we reach a per-message maximum send a "packets" message.
 			if packets.count == Tunnel.maximumPacketsPerMessage {
+				simpleTunnelLog("[IP] utun→tunnel: connection \(identifier) sending \(packets.count) packets to client")
 				tunnel?.sendPackets(packets, protocols: protocols, forConnection: identifier)
 				packets = [Data]()
 				protocols = [NSNumber]()
@@ -192,6 +195,7 @@ class ServerTunnelConnection: Connection {
 
 		// If there are unsent packets left over, send them now.
 		if packets.count > 0 {
+			simpleTunnelLog("[IP] utun→tunnel: connection \(identifier) sending \(packets.count) trailing packets to client")
 			tunnel?.sendPackets(packets, protocols: protocols, forConnection: identifier)
 		}
 	}
@@ -259,6 +263,8 @@ class ServerTunnelConnection: Connection {
     override func sendPackets(_ packets: [Data], protocols: [NSNumber]) {
 		guard let source = utunSource else { return }
         let utunSocket = Int32(source.handle)
+
+		simpleTunnelLog("[IP] tunnel→utun: connection \(identifier) writing \(packets.count) packets from client to UTUN")
 
         for (index, packet) in packets.enumerated() {
 			guard index < protocols.count else { break }

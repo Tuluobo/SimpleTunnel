@@ -66,7 +66,7 @@ public enum AppProxyFlowKind: Int {
 }
 
 /// The tunnel delegate protocol.
-public protocol TunnelDelegate: class {
+public protocol TunnelDelegate: AnyObject {
 	func tunnelDidOpen(_ targetTunnel: Tunnel)
 	func tunnelDidClose(_ targetTunnel: Tunnel)
 	func tunnelDidSendConfiguration(_ targetTunnel: Tunnel, configuration: [String: AnyObject])
@@ -81,25 +81,25 @@ open class Tunnel: NSObject {
     open weak var delegate: TunnelDelegate?
 
 	/// The current set of logical connections open within the tunnel.
-    var connections = [Int: Connection]()
+    open var connections = [Int: Connection]()
 
 	/// The list of data that needs to be written to the tunnel connection when possible.
-	let savedData = SavedData()
+	public let savedData = SavedData()
 
 	/// The SimpleTunnel Bonjour service type.
-	class var serviceType: String { return "_tunnelserver._tcp" }
+	open class var serviceType: String { return "_tunnelserver._tcp" }
 
 	/// The SimpleTunnel Bonjour service domain.
-	class var serviceDomain: String { return "local" }
+	open class var serviceDomain: String { return "local" }
 
 	/// The maximum size of a SimpleTunnel message.
-	class var maximumMessageSize: Int { return 128 * 1024 }
+	open class var maximumMessageSize: Int { return 128 * 1024 }
 
 	/// The maximum size of a single tunneled IP packet.
-	class var packetSize: Int { return 8192 }
+	open class var packetSize: Int { return 8192 }
 
 	/// The maximum number of IP packets in a single SimpleTunnel data message.
-	class var maximumPacketsPerMessage: Int { return 32 }
+	open class var maximumPacketsPerMessage: Int { return 32 }
 
 	/// A list of all tunnels.
 	static var allTunnels = [Tunnel]()
@@ -114,7 +114,7 @@ open class Tunnel: NSObject {
 	// MARK: Interface
 
 	/// Close the tunnel.
-	func closeTunnel() {
+	open func closeTunnel() {
 		for connection in connections.values {
 			connection.tunnel = nil
 			connection.abort()
@@ -123,7 +123,7 @@ open class Tunnel: NSObject {
 		
 		savedData.clear()
 
-		if let index = Tunnel.allTunnels.index(where: { return $0 === self }) {
+        if let index = Tunnel.allTunnels.firstIndex(where: { return $0 === self }) {
 			Tunnel.allTunnels.remove(at: index)
 		}
 	}
@@ -147,7 +147,7 @@ open class Tunnel: NSObject {
 	}
 
 	/// Write some data (i.e., a serialized message) to the tunnel.
-    func writeDataToTunnel(_ data: Data, startingAtOffset: Int) -> Int {
+    open func writeDataToTunnel(_ data: Data, startingAtOffset: Int) -> Int {
         simpleTunnelLog("writeDataToTunnel called on abstract base class")
         return -1
     }
@@ -178,7 +178,7 @@ open class Tunnel: NSObject {
 	}
 
 	/// Send a message on the tunnel connection.
-	func sendMessage(_ messageProperties: [String: AnyObject]) -> Bool {
+	public func sendMessage(_ messageProperties: [String: AnyObject]) -> Bool {
 		var written: Int = 0
 
         guard let messageData = serializeMessage(messageProperties) else {
@@ -208,7 +208,7 @@ open class Tunnel: NSObject {
 	}
 
 	/// Send a Data message on the tunnel connection.
-	func sendData(_ data: Data, forConnection connectionIdentifier: Int) {
+	open func sendData(_ data: Data, forConnection connectionIdentifier: Int) {
 		let properties = createMessagePropertiesForConnection(connectionIdentifier, commandType: .data, extraProperties:[
 				TunnelMessageKey.Data.rawValue : data as AnyObject
 			])
@@ -219,7 +219,7 @@ open class Tunnel: NSObject {
 	}
 
 	/// Send a Data message with an associated endpoint.
-	func sendDataWithEndPoint(_ data: Data, forConnection connectionIdentifier: Int, host: String, port: Int ) {
+	open func sendDataWithEndPoint(_ data: Data, forConnection connectionIdentifier: Int, host: String, port: Int ) {
 		let properties = createMessagePropertiesForConnection(connectionIdentifier, commandType: .data, extraProperties:[
 				TunnelMessageKey.Data.rawValue: data as AnyObject,
 				TunnelMessageKey.Host.rawValue: host as AnyObject,
@@ -232,7 +232,7 @@ open class Tunnel: NSObject {
 	}
 
 	/// Send a Suspend message on the tunnel connection.
-	func sendSuspendForConnection(_ connectionIdentifier: Int) {
+    open func sendSuspendForConnection(_ connectionIdentifier: Int) {
 		let properties = createMessagePropertiesForConnection(connectionIdentifier, commandType: .suspend)
 		if !sendMessage(properties) {
 			simpleTunnelLog("Failed to send a suspend message for connection \(connectionIdentifier)")
@@ -240,7 +240,7 @@ open class Tunnel: NSObject {
 	}
 
 	/// Send a Resume message on the tunnel connection.
-	func sendResumeForConnection(_ connectionIdentifier: Int) {
+	open func sendResumeForConnection(_ connectionIdentifier: Int) {
 		let properties = createMessagePropertiesForConnection(connectionIdentifier, commandType: .resume)
 		if !sendMessage(properties) {
 			simpleTunnelLog("Failed to send a resume message for connection \(connectionIdentifier)")
@@ -259,7 +259,7 @@ open class Tunnel: NSObject {
 	}
 
 	/// Send a Packets message on the tunnel connection.
-	func sendPackets(_ packets: [Data], protocols: [NSNumber], forConnection connectionIdentifier: Int) {
+	open func sendPackets(_ packets: [Data], protocols: [NSNumber], forConnection connectionIdentifier: Int) {
 		let properties = createMessagePropertiesForConnection(connectionIdentifier, commandType: .packets, extraProperties:[
 				TunnelMessageKey.Packets.rawValue: packets as AnyObject,
 				TunnelMessageKey.Protocols.rawValue: protocols as AnyObject
@@ -271,7 +271,7 @@ open class Tunnel: NSObject {
 	}
 
 	/// Process a message payload.
-	func handlePacket(_ packetData: Data) -> Bool {
+	open func handlePacket(_ packetData: Data) -> Bool {
 		let properties: [String: AnyObject]
 		do {
 			properties = try PropertyListSerialization.propertyList(from: packetData, options: PropertyListSerialization.MutabilityOptions(), format: nil) as! [String: AnyObject]
@@ -309,7 +309,7 @@ open class Tunnel: NSObject {
 				if let host = properties[TunnelMessageKey.Host.rawValue] as? String,
 					let port = properties[TunnelMessageKey.Port.rawValue] as? Int
 				{
-					simpleTunnelLog("Received data for connection \(connection?.identifier) from \(host):\(port)")
+                    simpleTunnelLog("Received data for connection \(String(describing: connection?.identifier)) from \(host):\(port)")
 					/* UDP case : send peer's address along with data */
 					targetConnection.sendDataWithEndPoint(data, host: host, port: port)
 				}
@@ -327,10 +327,10 @@ open class Tunnel: NSObject {
 				if let closeDirectionNumber = properties[TunnelMessageKey.CloseDirection.rawValue] as? Int,
 					let closeDirection = TunnelConnectionCloseDirection(rawValue: closeDirectionNumber)
 				{
-					simpleTunnelLog("\(connection?.identifier): closing \(closeDirection)")
+                    simpleTunnelLog("\(String(describing: connection?.identifier)): closing \(closeDirection)")
 					targetConnection.closeConnection(closeDirection)
 				} else {
-					simpleTunnelLog("\(connection?.identifier): closing reads and writes")
+                    simpleTunnelLog("\(String(describing: connection?.identifier)): closing reads and writes")
 					targetConnection.closeConnection(.all)
 				}
 
@@ -350,7 +350,7 @@ open class Tunnel: NSObject {
 	}
 
 	/// Handle a recieved message.
-	func handleMessage(_ command: TunnelCommand, properties: [String: AnyObject], connection: Connection?) -> Bool {
+	open func handleMessage(_ command: TunnelCommand, properties: [String: AnyObject], connection: Connection?) -> Bool {
 		simpleTunnelLog("handleMessage called on abstract base class")
 		return false
 	}

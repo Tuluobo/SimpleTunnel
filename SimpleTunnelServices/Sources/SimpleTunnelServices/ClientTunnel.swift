@@ -202,7 +202,7 @@ open class ClientTunnel: Tunnel {
 	}
 
 	/// Write data to the tunnel connection.
-	override func writeDataToTunnel(_ data: Data, startingAtOffset: Int) -> Int {
+    open override func writeDataToTunnel(_ data: Data, startingAtOffset: Int) -> Int {
 		connection?.write(data) { error in
 			if error != nil {
 				self.closeTunnelWithError(error)
@@ -212,7 +212,7 @@ open class ClientTunnel: Tunnel {
 	}
 
 	/// Handle a message received from the tunnel server.
-	override func handleMessage(_ commandType: TunnelCommand, properties: [String: AnyObject], connection: Connection?) -> Bool {
+    open override func handleMessage(_ commandType: TunnelCommand, properties: [String: AnyObject], connection: Connection?) -> Bool {
 		var success = true
 
 		switch commandType {

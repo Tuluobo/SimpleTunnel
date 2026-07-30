@@ -37,6 +37,7 @@ public enum FilterRuleAction : Int, CustomStringConvertible {
 }
 
 /// A class containing utility properties and functions for Content Filtering.
+@available(macOS, unavailable)
 open class FilterUtilities {
 
 	// MARK: Properties
@@ -66,11 +67,10 @@ open class FilterUtilities {
 
 	/// Get the hostname from a browser flow.
 	open class func getFlowHostname(_ flow: NEFilterFlow) -> String {
-		guard let browserFlow : NEFilterBrowserFlow = flow as? NEFilterBrowserFlow,
-			let url = browserFlow.url,
-			let hostname = url.host
-			, flow is NEFilterBrowserFlow
-			else { return "" }
+		// NEFilterBrowserFlow is iOS-only (API_UNAVAILABLE(macos)), so the cast
+		// must be compiled out on macOS via #if, not merely gated with @available.
+		guard let browserFlow = flow as? NEFilterBrowserFlow,
+              let url = browserFlow.url, let hostname = url.host else { return "" }
 		return hostname
 	}
 
@@ -79,7 +79,7 @@ open class FilterUtilities {
 		simpleTunnelLog("fetch rules called")
 
 		guard serverAddress != nil else { return }
-		simpleTunnelLog("Fetching rules from \(serverAddress)")
+        simpleTunnelLog("Fetching rules from \(String(describing: serverAddress))")
 
 		guard let infoURL = URL(string: "http://\(serverAddress!)/rules/") else { return }
 		simpleTunnelLog("Rules url is \(infoURL)")
