@@ -1,0 +1,15 @@
+//
+//  Common.xcconfig
+//  SimpleTunnel
+//
+//  Created by Tuluobo on 29/7/26.
+//  Copyright © 2026 Apple Inc. All rights reserved.
+//
+
+// Configuration settings file format documentation can be found at:
+// https://developer.apple.com/documentation/xcode/adding-a-build-configuration-file-to-your-project
+
+SWIFT_VERSION = 5.0
+
+COMMON_IDENTIFIER = com.example.apple-samplecode
+DEVELOPMENT_TEAM =

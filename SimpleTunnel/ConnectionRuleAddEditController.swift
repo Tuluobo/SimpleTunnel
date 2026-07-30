@@ -100,8 +100,8 @@ class ConnectionRuleAddEditController: ConfigurationParametersViewController {
 				guard let enumController = segue.destination as? EnumPickerController else { break }
 
 				let enumValues: [NEEvaluateConnectionRuleAction] = [ .connectIfNeeded, .neverConnect, ],
-					stringValues = enumValues.flatMap { $0.description },
-					currentSelection = enumValues.index { $0 == targetRule.action }
+					stringValues = enumValues.map { $0.description },
+					currentSelection = enumValues.firstIndex { $0 == targetRule.action }
 
 				enumController.setValues(stringValues, title: "Action", currentSelection: currentSelection) { newRow in
 					let newAction = enumValues[newRow]
